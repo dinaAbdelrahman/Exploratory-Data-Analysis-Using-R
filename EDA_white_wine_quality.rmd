@@ -1,0 +1,642 @@
+White Wine Analysis
+========================================================
+
+Abstract
+
+This analysis shall provide exploaratory data analysis for the white wine data set. It includes different 4898 observation for white wine samples. a set of different 11 variables about the white wine has been recorded for each sample in addition to wine quality, there is one field for the record indexing. The inputs include objective tests (e.g. PH values) and the output is based on sensory data (median of at least 3 evaluations made by wine experts). Each expert graded the wine quality between 0 (very bad) and 10 (very excellent).
+
+
+
+
+Library and Dataset Preparations
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+
+library(ggplot2)
+library(GGally)
+library(scales)
+library(memisc)
+library(dplyr)
+#for grid plotting
+library(gridExtra)
+#for heat maps
+library(reshape2)
+
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+
+# Load the Data
+getwd()
+
+#check avaiable files
+list.files()
+
+#load Data
+ww <- read.csv('wineQualityWhites.csv')
+
+str(ww)
+
+```
+
+All data fields are num so no categorical variables availble in the original dataset.
+
+```{r}
+
+summary(ww)
+
+```
+
+Based on the values fields residual.sugar, free.sulfur.dioxide, total.sulfur.dioxide expected to have outliers
+
+
+
+
+# Univariate Plots Section
+
+
+Exploring the dataset structure
+
+```{r echo=FALSE, Univariate_Plots}
+
+head(ww)
+
+```
+
+ Input variables (based on physicochemical tests):
+   1 - fixed acidity (tartaric acid - g / dm^3)
+   2 - volatile acidity (acetic acid - g / dm^3)
+   3 - citric acid (g / dm^3)
+   4 - residual sugar (g / dm^3)
+   5 - chlorides (sodium chloride - g / dm^3
+   6 - free sulfur dioxide (mg / dm^3)
+   7 - total sulfur dioxide (mg / dm^3)
+   8 - density (g / cm^3)
+   9 - pH
+   10 - sulphates (potassium sulphate - g / dm3)
+   11 - alcohol (% by volume)
+
+Output variable (based on sensory data): 
+   12 - quality (score between 0 and 10)
+
+
+
+```{r}
+table(ww$quality)
+
+```
+
+
+```{r}
+
+#Exploring quality distribution
+ggplot(aes(x = quality), data = ww) +
+  geom_histogram(binwidth = 1,color = 'black', fill = 'pink')
+
+```
+
+The wine quality is following a normal distribution with median=6, appears low samples amount for poor and excellent quality as well. Also no samples appear for quality 1, 2 or 10.
+Based on the discrete distribution of the quality and as I will explore the relationship between it and other variables to I will create an image of it as factor
+
+```{r}
+#change the quality to factor
+ww$quality_index <- factor(ww$quality)
+str(ww)
+
+```
+
+
+```{r}
+#Exploring some variables
+
+p1= ggplot(aes(x = fixed.acidity), data = ww)+geom_histogram()
+p2= ggplot(aes(x = volatile.acidity), data = ww)+geom_histogram()
+p3= ggplot(aes(x = citric.acid), data = ww)+geom_histogram()
+p4= ggplot(aes(x = residual.sugar), data = ww)+geom_histogram()
+p5= ggplot(aes(x =free.sulfur.dioxide), data = ww)+geom_histogram()
+p6= ggplot(aes(x =total.sulfur.dioxide), data = ww)+geom_histogram()
+p7= ggplot(aes(x =density), data = ww)+geom_histogram()
+p8= ggplot(aes(x =pH ), data = ww)+geom_histogram()
+p9= ggplot(aes(x =sulphates), data = ww)+geom_histogram()
+p10= ggplot(aes(x =alcohol), data = ww)+geom_histogram()
+
+theme_set(theme_grey()+theme(plot.background = element_rect(colour = 'white')))
+# arrange plots in grid
+grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9,p10, ncol=5,nrow=2)
+
+```
+
+Based on the histogram plot:
+Fixed.acidity -->normal distribution with few outliers
+volatile.acidity --> normal distribution with few outliers
+citric.acidity --> normal distribution with few outliers
+residual.sugar --> not a normal distribution as peak at small value with few outliers
+free.sulfur.dioxide --> normal distribution with few outliers
+total.sulfur.dioxide --> normal distribution with few outliers
+density --> normal distribution with few outliers
+pH --> normal distribution
+sulphates --> normal distribution
+alcohol --> not a normal distribution as many modes are appearing
+
+```{r}
+
+table(ww$fixed.acidity)
+
+```
+
+
+
+```{r}
+#Exploring fixed.acidity distribution
+ggplot(aes(x = fixed.acidity), data = ww) +
+  geom_histogram(binwidth = 0.1,color = 'black', fill = 'pink')+ 
+  scale_x_continuous(breaks=3:15)
+
+```
+
+fixed.acidity distribution are having normal distribution mainly values are between 5 & 9 so in following graph I am replotting the distribution while zooming on the 99% percent samples to remove samples with extreme high value.
+
+```{r}
+
+#remove fixed.acidity lowest and highest 1% sample 
+
+ggplot(aes(x = fixed.acidity), data = ww) +
+  geom_histogram(binwidth = 0.1,color = 'black', fill = 'pink')+ 
+  scale_x_continuous(breaks=3:15)+
+  xlim(quantile(ww$fixed.acidity,0.01),quantile(ww$fixed.acidity,0.99))
+
+```
+
+
+
+
+```{r}
+
+table(ww$pH)
+
+```
+
+
+```{r}
+
+ggplot(aes(x = pH), data = ww) +
+  geom_histogram(binwidth = 0.1,color = 'black', fill = 'pink')+ 
+  scale_x_continuous(breaks=seq(2.5,4,0.1))
+
+```
+pH distribution are having normal distribution,  values are between 2.72 & 3.82 so in following graph I am replotting the distribution while changing the bin size to get better visibity on value distribution, no outliers appearing for pH.
+
+```{r}
+ggplot(aes(x = pH), data = ww) +
+  geom_histogram(binwidth = 0.01,color = 'black', fill = 'pink')+ 
+  scale_x_continuous(breaks=seq(2.5,4,0.1))
+```
+
+After the bin size reduction for pH, still the distribution maintaining the approximate normal distribution with median 3.18.
+
+
+```{r}
+
+#box plot for fields I beleive to have many outliers
+#fields: fields residual.sugar, free.sulfur.dioxide, total.sulfur.dioxide
+
+p1=ggplot(aes(y = residual.sugar), data = ww) +
+  geom_boxplot()
+
+p2=ggplot(aes(y = free.sulfur.dioxide), data = ww) +
+  geom_boxplot()
+
+p3=ggplot(aes(y = total.sulfur.dioxide), data = ww) +
+  geom_boxplot()
+
+
+# arrange plots in grid
+grid.arrange(p1, p2, p3, ncol=3)
+
+```
+
+I used the box plot to verify the outliers in the 3 variables residual.sugar, free.sulfur.dioxide, total.sulfur.dioxide.
+residual.sugar: only few observations are considered outliers in the increasing side from the median
+free.sulfur.dioxide:many observations are considered outliers in the increasing side from the median
+total.sulfur.dioxide:many observations are considered outliers in both sides from the median
+
+# Univariate Analysis
+
+
+### What is the structure of your dataset?
+My dataset has 4898 observation for white wine samples with 12 different variables
+
+### What is/are the main feature(s) of interest in your dataset?
+The wine quality is the main features along with different 11 attributes
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest? I will explore the 11 attributes to check if they have relation with the wine quality
+
+### Did you create any new variables from existing variables in the dataset?
+Yes, I created one factor transformation for the quality
+
+### Of the features you investigated, were there any unusual distributions? \
+Did you perform any operations on the data to tidy, adjust, or change the form \
+of the data? If so, why did you do this? 
+This dataset appears to be relatively simple not high percentage or outliers or missing values.
+The quality is a discrete value and also based on human measurement so may have some bias so would prefer dealing with it a categorical value so I made a copy of it as factor.
+3 fields are having clear outliers residual.sugar, free.sulfur.dioxide, total.sulfur.dioxide
+
+
+# Bivariate Plots Section
+
+
+
+```{r echo=FALSE, Bivariate_Plots}
+
+```
+
+```{r}
+
+
+ggpairs(ww,progress=FALSE,upper = list(continuous = wrap("cor", size = 2)))
+
+
+```
+
+This graph to check the relationship between the availble variables, on the diagonal we can see the same findings I presented in the previous section, most variables are having the normal distribution pattern.
+Some variables appear to have positive correlation with each other like residual.sugar with  density while other appear to have negative correlation like density with total.sulfur.dioxide. With respect to quality (last line plots) nothing appear to have strong relation.
+In coming section will further explore detailed correlation between variables.
+
+
+
+```{r}
+
+ggcorr(ww,digits=2,label = TRUE,label_size=3)
+
+```
+
+As shown based on correlation factor, we can see 6 different ranges:
+-0.3-->0, 0-->0.3: no correlation or poor correlation relation
+-0.7-->-0.3, 0.3-->0.7: medium correlation relation
+-1 -->-0.7, 0.7 -->1: strong correlation relation
+the negative sign refer to inverse relation while the positive refer to positive relation
+
+We can then state the positive strong relations:
+residual.sugar and desnsity:0.8
+free.sulfur.dioxide and total.sulfur.dioxide:0.7
+
+We can then state the negative strong relations:
+density and alcohol:-0.8
+
+Medium relation example:
+residual.sugar and total.sulfur.dioxide:0.4 
+residual.sugar and alcohol:-0.5
+
+for the quality we have medium positive relation with alcohol and medium negative relation with density
+
+```{r}
+
+#plotting strong relation between residual.sugar and density
+ggplot(aes(x=residual.sugar,y=density),data=ww)+
+  geom_point(fill=I('red'),color='black',shape=21)+
+  xlim(0,quantile(ww$residual.sugar,0.99))+
+  ylim(0.9871,quantile(ww$density,0.99))+
+  stat_smooth(method = 'lm')
+
+```
+
+strong positive relation between residual.sugar and density
+
+```{r}
+
+#plotting strong relation between free.sulfur.dioxide and total.sulfur.dioxide
+ggplot(aes(x=free.sulfur.dioxide,y=total.sulfur.dioxide),data=ww)+
+  geom_point(fill=I('red'),color='black',shape=21)+
+  xlim(0,quantile(ww$free.sulfur.dioxide,0.99))+
+  ylim(0,quantile(ww$total.sulfur.dioxide,0.99))+
+  stat_smooth(method = 'lm')
+
+```
+
+strong positive relation between free.sulfur.dioxide and total.sulfur.dioxide
+
+```{r}
+#plotting strong relation between density and total.sulfur.dioxide
+ggplot(aes(x=density,y=total.sulfur.dioxide),data=ww)+
+  geom_point(fill=I('red'),color='black',shape=21)+
+  xlim(0.9871,quantile(ww$density,0.99))+
+  ylim(0,quantile(ww$total.sulfur.dioxide,0.99))+
+  stat_smooth(method = 'lm')
+```
+
+strong positive relation between density and total.sulfur.dioxide
+
+```{r}
+#plotting medium relation between residual.sugar and total.sulfur.dioxide
+ggplot(aes(x=residual.sugar,y=total.sulfur.dioxide),data=ww)+
+  geom_point(fill=I('orange'),color='black',shape=21)+
+  xlim(0,quantile(ww$residual.sugar,0.99))+
+  ylim(0,quantile(ww$total.sulfur.dioxide,0.99))+
+  stat_smooth(method = 'lm')
+```
+
+medium positive relation between residual.sugar and total.sulfur.dioxide
+
+```{r}
+
+#plotting strong relation between density and alcohol
+ggplot(aes(x=density,y=alcohol),data=ww)+
+  geom_point(fill=I('blue'),color='black',shape=21)+
+  xlim(0.9871,quantile(ww$density,0.99))+
+  ylim(min(ww$alcohol),quantile(ww$alcohol,0.99))+
+  stat_smooth(method = 'lm',color='red')
+
+
+```
+
+strong negative relation between density and alcohol
+
+```{r}
+#plotting medium relation between residual.sugar and alcohol
+ggplot(aes(x=residual.sugar,y=alcohol),data=ww)+
+  geom_point(fill=I('orange'),color='black',shape=21)+
+  xlim(0,quantile(ww$residual.sugar,0.99))+
+  ylim(7,quantile(ww$alcohol,0.99))+
+  stat_smooth(method = 'lm',color='red')
+```
+
+medium negative relation between residual.sugar and alcohol
+
+
+```{r}
+#plotting medium relation between quality and alcohol
+ggplot(aes(x=alcohol,y=quality),data=ww)+
+  geom_point(fill=I('orange'),color='black',shape=21)+
+  stat_smooth(method = 'lm',color='red')
+```
+
+medium positive relation between quality and alcohol
+
+```{r}
+#plotting medium relation between quality and alcohol
+ggplot(aes(x=quality_index,y=alcohol),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19)
+```
+
+From the box plot it appears the median for the alcohol increase with quality except for quality 3 and 4 however as the number of samples is small so potential bias may exist so I will narrow down the quality from 10 category into 3 as it is easy for drinks to have opinion bad,normal,good so will create quality.bucket to group the samples into 3 different categories  
+
+```{r}
+
+#Narrow the quality to 3 categories to minimize the samples distribution variation
+
+ww$quality.bucket <- cut(ww$quality,labels = c('Low','Medium','High'),
+                             c(1,5.9,6.1,10))
+table(ww$quality.bucket)
+
+```
+
+Now the distribution of samples into 3 categories is more balanced and would be used in the coming analysis.
+
+```{r}
+#plotting relation between quality bucket and alcohol
+ggplot(aes(x=quality.bucket,y=alcohol),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19)
+```
+
+Now appear more relationship, so on average the increase of alcohol increase the wine quality
+
+```{r}
+#plotting relation between quality bucket and density
+ggplot(aes(x=quality.bucket,y=density),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19)+
+  ylim(0.9871,quantile(ww$density,0.99))
+```
+ 
+Doing similar exploratory between the density and quality.bucket, so on average the increase of density reduce the wine quality and this is expected.
+
+```{r}
+
+#chekother fields relationship with quality.bucket
+p1 = ggplot(aes(x=quality.bucket,y=fixed.acidity),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(6.2,7.5)
+p2 = ggplot(aes(x=quality.bucket,y=volatile.acidity),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(0.15,0.35)
+p3 = ggplot(aes(x=quality.bucket,y=citric.acid),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(0.25,0.4)
+p4 = ggplot(aes(x=quality.bucket,y=residual.sugar),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(0,7.5)
+p5 = ggplot(aes(x=quality.bucket,y=chlorides),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(0.02,0.06)
+p6 = ggplot(aes(x=quality.bucket,y=free.sulfur.dioxide),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(10,50)
+p7 = ggplot(aes(x=quality.bucket,y=total.sulfur.dioxide),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(75,175)
+p8 = ggplot(aes(x=quality.bucket,y=pH ),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(3.05,3.3)
+p9 = ggplot(aes(x=quality.bucket,y=sulphates),data=ww)+
+  geom_boxplot(fill=I('orange'),color='black',shape=19) + ylim(0.35,0.55)
+
+grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9, ncol=3,nrow=3) 
+ 
+
+```
+
+Exploring the rest of variables relationship with the quality.bucket.
+I can see below observations:
+increase in volatile.acidity reduce on average wine quality --> same observation for chorides, total.sulfur.dioxide, sulphates
+increase in residual.sugar increase on average wine quality --> same observation forfree.sulfur.dioxide
+
+
+```{r}
+#chekother fields relationship with quality.bucket
+p1 = ggplot(aes(x=quality.bucket,y=fixed.acidity,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm")
+p2 = ggplot(aes(x=quality.bucket,y=volatile.acidity,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p3 = ggplot(aes(x=quality.bucket,y=citric.acid,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p4 = ggplot(aes(x=quality.bucket,y=residual.sugar,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p5 = ggplot(aes(x=quality.bucket,y=chlorides,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p6 = ggplot(aes(x=quality.bucket,y=free.sulfur.dioxide,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p7 = ggplot(aes(x=quality.bucket,y=total.sulfur.dioxide,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm")
+p8 = ggplot(aes(x=quality.bucket,y=pH ,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm")
+p9 = ggplot(aes(x=quality.bucket,y=sulphates,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+
+grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9, ncol=3,nrow=3) 
+```
+
+Creating more clear graph to join the mean of variables by the quality.bucket to figure out is the quality is direct/inverse trending with the different variables and what 
+direct trending with quality.bucket: pH, sulphates
+inverse trending with quality.bucket: fixed.acidity, residual.sugar,chlorides, total.sulfur.dioxide
+no relationship with quality.bucket: volatile.acidity, citric.acidity, free.sulfur.dioxide
+
+# Bivariate Analysis
+
+> 
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the dataset?
+As per the correlation matrix, we can see 6 different ranges:
+-0.3-->0, 0-->0.3: no correlation or poor correlation relation
+-0.7-->-0.3, 0.3-->0.7: medium correlation relation
+-1 -->-0.7, 0.7 -->1: strong correlation relation
+the negative sign refer to inverse relation while the positive refer to positive relation
+
+We can then state the positive strong relations:
+residual.sugar and desnsity:0.8
+free.sulfur.dioxide and total.sulfur.dioxide:0.7
+
+We can then state the negative strong relations:
+density and alcohol:-0.8
+
+Medium relation example:
+residual.sugar and total.sulfur.dioxide:0.4 
+residual.sugar and alcohol:-0.5
+
+for the quality we have medium positive relation with alcohol and medium negative relation with density
+ 
+
+### Did you observe any interesting relationships between the other features \
+(not the main feature(s) of interest)? I analyse all relations as above stated
+
+### What was the strongest relationship you found?
+We can then state the positive strong relations: 
+residual.sugar and desnsity:0.8
+free.sulfur.dioxide and total.sulfur.dioxide:0.7
+We can then state the negative strong relations:
+density and alcohol:-0.8
+
+# Multivariate Plots Section
+
+
+```{r echo=FALSE, Multivariate_Plots}
+library(RColorBrewer)
+```
+
+
+```{r}
+ggplot(aes(y = alcohol, x = density,color=quality.bucket), data = ww) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter')+
+  xlim(min(ww$density),1.005)+
+  scale_color_brewer(type = 'div',palette = 4,
+                     guide = guide_legend(title = 'quality.bucket', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2)))
+```
+
+Here I am figuring out 2 variables distribution and if this will give better distribution for the quality.buket.
+It is shown from the distribution that the high quality wine are having high alcohol and less density value
+
+```{r}
+ggplot(aes(x=residual.sugar,y=density,color=quality.bucket), data = ww) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter')+
+  xlim(0,quantile(ww$residual.sugar,0.99))+
+  ylim(0.9871,quantile(ww$density,0.99))+
+  scale_color_brewer(type = 'div',palette = 4,
+                     guide = guide_legend(title = 'quality.bucket', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2)))
+```
+
+Here I am figuring out 2 variables distribution and if this will give better distribution for the quality.buket.
+It is shown from the distribution that the high quality wine are in the lower portion of the samples having lower residual sugar and lower density.
+
+```{r}
+ggplot(aes(y = alcohol, x = chlorides,color=quality.bucket), data = ww) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter')+
+  xlim(0.02,0.06)+
+  scale_color_brewer(type = 'div',palette = 4,
+                     guide = guide_legend(title = 'quality.bucket', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2)))
+```
+
+Here I am figuring out 2 variables distribution and if this will give better distribution for the quality.buket.
+It is shown from the distribution that the high quality wine are in the upper portion of the samples having lower chlorides and higher alcohol.
+
+
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. Were there features that strengthened each other in terms of \
+looking at your feature(s) of interest?
+the high quality wine are having high alcohol and less density value and lower clorides
+
+### Were there any interesting or surprising interactions between features?
+No
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the \
+There is no strong correlation between variables and the quality so any built model will have big errors exceeding 50%
+
+------
+
+# Final Plots and Summary
+
+
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(aes(x=density,y=alcohol),data=ww)+
+  geom_point(fill=I('blue'),color='black',shape=21)+
+  xlim(0.9871,quantile(ww$density,0.99))+
+  ylim(min(ww$alcohol),quantile(ww$alcohol,0.99))+
+  stat_smooth(method = 'lm',color='red')+
+  ggtitle("Alcohol VS Density Distribution for White Wines Samples")
+```
+
+### Description One
+There is strong negative relation between density and alcohol for the white wine samples which means the more the alcohol amount in the wine sample the less density it would have
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+p1 = ggplot(aes(x=quality.bucket,y=fixed.acidity,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm")
+p2 = ggplot(aes(x=quality.bucket,y=volatile.acidity,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p3 = ggplot(aes(x=quality.bucket,y=citric.acid,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p4 = ggplot(aes(x=quality.bucket,y=residual.sugar,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p5 = ggplot(aes(x=quality.bucket,y=chlorides,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p6 = ggplot(aes(x=quality.bucket,y=free.sulfur.dioxide,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+p7 = ggplot(aes(x=quality.bucket,y=total.sulfur.dioxide,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm")
+p8 = ggplot(aes(x=quality.bucket,y=pH ,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm")
+p9 = ggplot(aes(x=quality.bucket,y=sulphates,group = 1),data=ww)+
+  geom_point(stat='summary',fun.y=mean) + stat_smooth(aes(group = 1), method = "lm") 
+
+grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9, ncol=3,nrow=3,top="Quality Category Variation with Measured Component Median Value")
+```
+
+### Description Two
+The graph joins the mean of variables by the quality.bucket to figure out is the quality is direct/inverse trending with the different variables and what 
+direct trending with quality.bucket: pH, sulphates
+inverse trending with quality.bucket: fixed.acidity, residual.sugar,chlorides, total.sulfur.dioxide
+no relationship with quality.bucket: volatile.acidity, citric.acidity, free.sulfur.dioxide
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(aes(y = alcohol, x = density,color=quality.bucket), data = ww) +
+  geom_point(alpha = 0.5, size = 1, position = 'jitter')+
+  xlim(min(ww$density),1.005)+
+  scale_color_brewer(type = 'div',palette = 4,
+                     guide = guide_legend(title = 'quality.bucket', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2)))+
+  ggtitle("Wine Samples by Alcohol & density for quality categories")
+```
+
+
+### Description Three
+Based on the alcohol and density distribution ,the high quality wine are having high alcohol and less density value.
+------
+
+# Reflection
+
+It was interesting to study the different content of wine and impact on the quality, we get some insights about main components and its impact on the recorded quality. My concern is that there are 2 other factors: the crapes type (manufature time, source country) as well as the experts information (age group, sex, nationality) as this would bias their judgement as well.
+
